@@ -30,8 +30,7 @@
     <video id="camera" autoplay playsinline></video>
     <div id="animation"></div>
     
-    <audio id="animation-audio">
-        <!-- Use relative path to the audio file in your assets folder -->
+    <audio id="animation-audio" preload="auto">
         <source src="./assets/output_audio.mp3" type="audio/mpeg">
         Your browser does not support the audio element.
     </audio>
@@ -48,6 +47,24 @@
             const animationDiv = document.getElementById("animation");
             const audio = document.getElementById("animation-audio");
             let startTime;
+            let imagesLoaded = 0;
+            let frames = [];
+
+            // ** Preload PNG frames to reduce lag **
+            function preloadFrames() {
+                for (let i = 1; i <= frameCount; i++) {
+                    let img = new Image();
+                    img.src = `./frames/output_${String(i).padStart(4, '0')}.png`;
+                    img.onload = () => {
+                        imagesLoaded++;
+                        if (imagesLoaded === frameCount) {
+                            console.log("All frames preloaded");
+                            startBtn.disabled = false; // Enable start button after preloading
+                        }
+                    };
+                    frames.push(img);
+                }
+            }
 
             function animate(timestamp) {
                 if (!startTime) startTime = timestamp;
@@ -61,7 +78,6 @@
                     currentFrame = expectedFrame;
                 }
 
-                // Fix PNG frame path (relative to the "frames" folder)
                 animationDiv.style.backgroundImage = `url('./frames/output_${String(currentFrame).padStart(4, '0')}.png')`;
                 requestAnimationFrame(animate);
             }
@@ -69,12 +85,14 @@
             function startAnimation() {
                 audio.currentTime = 0;
                 audio.play().catch(err => console.error("Audio play error:", err));
-                startTime = performance.now(); // Reset timer
+                startTime = performance.now(); // Sync animation with audio
                 requestAnimationFrame(animate);
                 startBtn.style.display = "none"; // Hide button after starting
             }
 
             startBtn.addEventListener("click", startAnimation);
+            startBtn.disabled = true; // Disable start until preloading completes
+            preloadFrames(); // Start preloading frames
 
             navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                 .then(stream => {
