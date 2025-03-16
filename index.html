@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synced Animation</title>
+    <style>
+        * { margin: 0; padding: 0; overflow: hidden; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: black; }
+        #camera { position: absolute; width: 100vw; height: 100vh; object-fit: cover; z-index: -1; }
+        #animation {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+        }
+        #start-btn {
+            position: absolute;
+            bottom: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <video id="camera" autoplay playsinline></video>
+    <div id="animation"></div>
+    
+    <audio id="animation-audio">
+        <!-- Use relative path to the audio file in your assets folder -->
+        <source src="./assets/output_audio.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <button id="start-btn">Start Animation</button>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const startBtn = document.getElementById("start-btn");    
+            const frameCount = 514; // Total PNG frames
+            const frameRate = 30; // FPS
+            const frameDuration = 1000 / frameRate; // Time per frame in ms
+            let currentFrame = 1;
+            const animationDiv = document.getElementById("animation");
+            const audio = document.getElementById("animation-audio");
+            let startTime;
+
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                let elapsed = timestamp - startTime;
+                let expectedFrame = Math.floor(elapsed / frameDuration) + 1;
+
+                if (expectedFrame > frameCount) {
+                    currentFrame = 1; // Loop animation
+                    startTime = timestamp;
+                } else {
+                    currentFrame = expectedFrame;
+                }
+
+                // Fix PNG frame path (relative to the "frames" folder)
+                animationDiv.style.backgroundImage = `url('./frames/output_${String(currentFrame).padStart(4, '0')}.png')`;
+                requestAnimationFrame(animate);
+            }
+
+            function startAnimation() {
+                audio.currentTime = 0;
+                audio.play().catch(err => console.error("Audio play error:", err));
+                startTime = performance.now(); // Reset timer
+                requestAnimationFrame(animate);
+                startBtn.style.display = "none"; // Hide button after starting
+            }
+
+            startBtn.addEventListener("click", startAnimation);
+
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => {
+                    document.getElementById('camera').srcObject = stream;
+                })
+                .catch(err => console.error("Error accessing camera:", err));
+        });
+    </script>
+</body>
+</html>
